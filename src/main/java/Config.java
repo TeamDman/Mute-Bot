@@ -11,15 +11,18 @@ public class Config {
 	private Config(String name) {
 		this.name = name;
 		load();
+		save();
 	}
 
 	private void load() {
 		try (FileInputStream in = new FileInputStream(name + ".properties")) {
 			props.load(in);
+			for (Property p : Property.values()) {
+				props.computeIfAbsent(p.name(), k -> p.fallback);
+			}
 		} catch (FileNotFoundException e) { // Create config from defaults
 			for (Property p : Property.values())
 				props.put(p.name(), p.fallback);
-			save();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -53,7 +56,8 @@ public class Config {
 		DISCORD_TOKEN("undefined"),
 		REPORTCHANNEL("000000000000000000"),
 		MUTEROLE("000000000000000000"),
-		MUTETYPE("perms");
+		MUTETYPE("perms"),
+		MUTEMESSAGE("You have been muted for breaking rule 7. A moderator has been notified.");
 		final Object fallback;
 
 		Property(Object fallback) {

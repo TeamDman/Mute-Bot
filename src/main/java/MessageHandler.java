@@ -60,7 +60,7 @@ public class MessageHandler {
 					else
 						c.action.accept(event, m.group((2)));
 			}
-		} else if (patterns.stream().anyMatch(p -> p.matcher(event.getMessage().getContent()).find())) {
+		} else if (patterns.stream().anyMatch(p -> p.matcher(event.getMessage().getContent().toLowerCase()).find())) {
 			mute(event.getAuthor(), event.getGuild());
 			RequestBuffer.request(() -> event.getGuild().getChannelByID(Long.valueOf(main.config.get(Config.Property.REPORTCHANNEL))).sendMessage(new EmbedBuilder()
 					.withTitle("Mute Notice")
@@ -68,8 +68,14 @@ public class MessageHandler {
 					.appendField(event.getAuthor().getName(), event.getAuthor().mention(), true)
 					.appendField("ID", event.getAuthor().getLongID() + "", true)
 					.appendField("Message Content", event.getMessage().getContent(), true)
-					.appendField("Pattern Matched", patterns.stream().filter(p -> p.matcher(event.getMessage().getContent()).find()).findFirst().orElseGet(() -> Pattern.compile("<ERROR>")).pattern(), true)
+					.appendField("Pattern Matched", patterns.stream().filter(p -> p.matcher(event.getMessage().getContent().toLowerCase()).find()).findFirst().orElseGet(() -> Pattern.compile("<ERROR>")).pattern(), true)
 					.build()));
+			RequestBuffer.request(() -> event.getAuthor().getOrCreatePMChannel().sendMessage(new EmbedBuilder()
+					.withTitle("Mute Notice")
+					.withColor(Color.RED)
+					.appendDesc(main.config.get(Config.Property.MUTEMESSAGE))
+					.build())
+			);
 		}
 	}
 
@@ -81,7 +87,7 @@ public class MessageHandler {
 				roles.get().add(muteRole);
 				return true;
 			}).andThen(() -> {
-				guild.editUserRoles(user,roles.get().toArray(new IRole[0]));
+				guild.editUserRoles(user, roles.get().toArray(new IRole[0]));
 				return true;
 			}).execute();
 		} else {
@@ -102,7 +108,7 @@ public class MessageHandler {
 				roles.get().remove(muteRole);
 				return true;
 			}).andThen(() -> {
-				guild.editUserRoles(user,roles.get().toArray(new IRole[0]));
+				guild.editUserRoles(user, roles.get().toArray(new IRole[0]));
 				return true;
 			}).execute();
 		} else {
@@ -205,7 +211,7 @@ public class MessageHandler {
 				RequestBuffer.request(() -> event.getChannel().sendMessage("The role will now be used for mutes. This change has been written to config."));
 			else
 				RequestBuffer.request(() -> event.getChannel().sendMessage("The role will no longer be used for mutes. This change has been written to config."));
-			main.config.set(Config.Property.MUTETYPE, useRole?"role":"perms");
+			main.config.set(Config.Property.MUTETYPE, useRole ? "role" : "perms");
 		});
 
 		public BiConsumer<MessageReceivedEvent, String> action;
