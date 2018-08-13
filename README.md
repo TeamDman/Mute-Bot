@@ -1,7 +1,7 @@
 # Mute-Bot
 A Java-based discord bot for muting based on pattern matching
 
-#Setup
+# Setup
 Running `java -jar mute-bot-version-all.jar` will load the bot.
 On the first run, it will generate a `bot.properties` file with 4 fields:
  - REPORTCHANNEL: The ID of the channel where the bot will report when mutes are distributed
@@ -11,43 +11,43 @@ On the first run, it will generate a `bot.properties` file with 4 fields:
 
 ## Commands
 
-####/filter list
+#### /filter list
 Displays the current list of filter patterns including list indices.
 
-####/filter add <pattern>
+#### /filter add <pattern>
 Adds a pattern to the filter list and updates the `patterns.txt` file.
 
-####/filter remove <index>
+#### /filter remove <index>
 Removes the pattern at the given index from the filter list and updates the `patterns.txt` file.
 
-####/filter write
+#### /filter write
 Overwrites `patterns.txt` with the current contents of the filter list.
 
-####/filter read
+#### /filter read
 Overwrites the current filter list with the contents of `patterns.txt`.
 
-####/filter presets
+#### /filter presets
 Adds default patterns to the filter list, but does not update `patterns.txt`.
 
-####/filter clear
+#### /filter clear
 Clears the filter list. This does *not* update `patterns.txt`.
 
-####/filter help
+#### /filter help
 Displays the list of supported commands. Not as informative as this readme.
 
-####/filter mute <@mention>
+#### /filter mute <@mention>
 Manually applies the mute operation to the mentioned user.
 
-####/filter unmute <@mention>
+#### /filter unmute <@mention>
 Manually unmutes the mentioned user.
 
-####/filter setrole <@role>
+#### /filter setrole <@role>
 Sets the 'muted user' role and writes it to `bot.properties`.
 
-####/filter getrole
+#### /filter getrole
 Displays the current role used for muting.
 
-####/filter setmutetype <role|perms>
+#### /filter setmutetype <role|perms>
 Sets whether the bot will override permissions or give roles to mute people, and writes the change to `bot.properties`.
 
 
