@@ -27,7 +27,7 @@ public class Config {
 
 	private void save() {
 		try (FileOutputStream out = new FileOutputStream(name + ".properties")) {
-			props.store(out, name);
+			props.store(out, "MUTETYPE can be either 'role' or 'perms'");
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -44,9 +44,16 @@ public class Config {
 		return props.get(key.name()).toString(); // Not good, but good enough for now.
 	}
 
+	void set(Property key, String value) {
+		props.put(key.name(), value);
+		save();
+	}
+
 	public enum Property {
 		DISCORD_TOKEN("undefined"),
-		REPORTCHANNEL("000000000000000000");
+		REPORTCHANNEL("000000000000000000"),
+		MUTEROLE("000000000000000000"),
+		MUTETYPE("perms");
 		final Object fallback;
 
 		Property(Object fallback) {
