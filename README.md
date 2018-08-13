@@ -57,3 +57,10 @@ The channel where the notifications appear when the bot mutes people is defined 
 Currently, the channel is retrieved via id from the guild where the infraction is performed, but if the bot were to be ran on two servers, this behaviour will need to be updated.
 
 Occasionally the bot will throw an exception involving webhooks when the jar is loaded, I'm not sure why but it doesn't seem to impact the operation of the bot.
+
+Entries are separated by new lines, and support [regular expressions](https://www.regular-expressions.info/) (aka 'regex').
+
+By default, the bot does not have anything in the filter list, however, the `/filter presets` command can be used to add a single entry.
+The preset is `<@\!?(\d{18})>.*?<@\!?(?!\1)(\d{18})>.*?<@\!?(?!(?:\1|\2))(\d{18})>.*?<@\!?(?!(?:\1|\2))(\d{18})>.*?<@\!?(?!(?:\1|\2|\3))(\d{18})>.*?<@\!?(?!(?:\1|\2|\3|\4))(\d{18})>`
+which is a regex that matches any message that mentions 6 unique people.
+
