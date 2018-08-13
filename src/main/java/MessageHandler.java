@@ -73,9 +73,10 @@ public class MessageHandler {
 			write();
 		}),
 		REMOVE((event, arg) -> {
-			if (MessageHandler.patterns.remove((int) Integer.valueOf(arg)) != null)
-				RequestBuffer.request(() -> event.getChannel().sendMessage("Successfully removed the pattern"));
-			else
+			if (MessageHandler.patterns.remove((int) Integer.valueOf(arg)) != null) {
+				RequestBuffer.request(() -> event.getChannel().sendMessage("Successfully removed the pattern, and updated patterns.txt"));
+				write();
+			}else
 				RequestBuffer.request(() -> event.getChannel().sendMessage("Failed to find the specified pattern"));
 		}),
 		LIST((event, arg) -> {

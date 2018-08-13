@@ -22,7 +22,7 @@ public class ClientFactory {
 	public static IDiscordClient getClient() {
 		if (main.client == null) {
 			String token = main.config.get(Config.Property.DISCORD_TOKEN);
-			if (token.isEmpty() || token.equals("undefined")){
+			if (token == null || token.isEmpty() || token.equals("undefined")){
 				System.out.println();
 				System.out.println("MISSING DISCORD TOKEN");
 				System.out.println("EDIT PROPERTIES AND RELAUNCH");

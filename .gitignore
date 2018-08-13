@@ -18,3 +18,4 @@ gradle-app.setting
 /.idea/
 modules/
 out/
+/bot.properties

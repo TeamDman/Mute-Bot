@@ -40,14 +40,13 @@ public class Config {
 		return main.config;
 	}
 
-	public <T> T get(Property key) {
-		//noinspection unchecked
-		return (T) props.<T>get(key.name()); // Not good, but good enough for now.
+	String get(Property key) {
+		return props.get(key.name()).toString(); // Not good, but good enough for now.
 	}
 
 	public enum Property {
 		DISCORD_TOKEN("undefined"),
-		REPORTCHANNEL(null);
+		REPORTCHANNEL("000000000000000000");
 		final Object fallback;
 
 		Property(Object fallback) {
