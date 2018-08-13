@@ -51,7 +51,7 @@ Displays the current role used for muting.
 Sets whether the bot will override permissions or give roles to mute people, and writes the change to `bot.properties`.
 
 
-##Notes
+## Notes
 Even if the bot is set to use a role to mute people, if the role is not defined, it will use permission overrides instead.
 The channel where the notifications appear when the bot mutes people is defined in `bot.properties`, and is the id of the desired channel.
 Currently, the channel is retrieved via id from the guild where the infraction is performed, but if the bot were to be ran on two servers, this behaviour will need to be updated.
