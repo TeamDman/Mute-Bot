@@ -1,3 +1,4 @@
+import sx.blah.discord.Discord4J;
 import sx.blah.discord.api.events.EventSubscriber;
 import sx.blah.discord.handle.impl.events.guild.channel.message.MessageReceivedEvent;
 import sx.blah.discord.util.EmbedBuilder;
@@ -18,10 +19,6 @@ public class MessageHandler {
 	static final Pattern       cmdPattern = Pattern.compile("^/filter (\\w+)\\s?(.*)");
 	static final List<Pattern> patterns   = new ArrayList<>();
 
-	static {
-		read();
-	}
-
 	static void read() {
 		patterns.clear();
 		try {
@@ -29,7 +26,9 @@ public class MessageHandler {
 			while (in.hasNextLine())
 				patterns.add(Pattern.compile(in.nextLine()));
 		} catch (IOException e) {
+			System.out.println("There was an exception loading the patterns.txt file. If this is the first time run, then this can be ignored.");
 			e.printStackTrace();
+			write();
 		}
 	}
 

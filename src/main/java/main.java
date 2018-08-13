@@ -11,5 +11,6 @@ public class main {
 
 	public static void main(String[] args) {
 		client.getDispatcher().registerListener(MessageHandler.class);
+		MessageHandler.read();
 	}
 }
