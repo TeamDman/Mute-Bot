@@ -1,7 +1,7 @@
 {
   "prefix": "/filter",
-  "presence": "pretty colours",
-  "presence_type": 3,
+  "presence": "everything you say",
+  "presence_type": 2,
   "mute_role_id": "478360461817937921",
   "report_channel_id": "452530315630477333",
   "mute_role_enabled": true,
@@ -11,7 +11,7 @@
   "infraction_mute_notify_message": "You said something that goes against policy. An administrator has been notified.",
   "infraction_pardon_notify_enable": true,
   "infraction_pardon_notify_message": "you good fam",
-  "rei_irl": "<@!?159018622600216577>",
+  "rei_irl": "<@!?129439015849033728>",
   "rei_timer": 10,
   "rei_banreason": "Pinged rei .-.",
   "rei_mute": true,
@@ -48,6 +48,9 @@
   ],
   "patterns": [
     "<@&?\\!?(\\d{18})>.*?<@&?\\!?(?!\\1)(\\d{18})>.*?<@&?\\!?(?!(?:\\1|\\2))(\\d{18})>.*?<@&?\\!?(?!(?:\\1|\\2))(\\d{18})>.*?<@&?\\!?(?!(?:\\1|\\2|\\3))(\\d{18})>.*?<@&?\\!?(?!(?:\\1|\\2|\\3|\\4))(\\d{18})>",
-    "meatloaf"
+    "ni[bg]{2}(?:er|3r|a)",
+    "\\bkike\\b",
+    "gas\\s*the\\s*jews",
+    "fag(?:ggot)*"
   ]
 }
