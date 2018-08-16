@@ -1,56 +1,28 @@
 {
-    "prefix": "/claims",
-    "max_changes_name": 3,
-    "max_changes_colour": 3,
+    "prefix": "/filter",
     "presence": "pretty colours",
     "presence_type": 3,
-    "colour_distance_threshold": 200,
-    "colour_blacklist": [
-        [
-            51,
-            152,
-            219
-        ],
-        [
-            255,
-            0,
-            0
-        ]
+    "mute_role_id": "478360461817937921",
+    "report_channel_id": "452530315630477333",
+    "mute_role_enabled": true,
+    "infraction_ban_notify_enable": true,
+    "infraction_ban_notify_message": "You said something you shouldn't have, punk.",
+    "infraction_mute_notify_enable": true,
+    "infraction_mute_notify_message": "You said something that goes against policy. An administrator has been notified.",
+    "infraction_pardon_notify_enable": true,
+    "infraction_pardon_notify_message": "you good fam",
+    "rei_irl": "<@!?159018622600216577>",
+    "rei_timer": 10,
+    "rei_banreason": "Pinged rei .-.",
+    "rei_mute": true,
+    "funtext": [
+        "{name} has sinned.",
+        "{name} feels a menacing presence...",
+        "Something starts moving towards {name}...",
+        "{name} has OOF'd."
     ],
-    "roles_blacklist": [
-        "386866580916797441",
-        "383961248888258561",
-        "384145758896521218",
-        "413469921889091594",
-        "442598518096658443",
-        "392820621219725312",
-        "389466562983362571",
-        "401814448991502336",
-        "391994161928339466",
-        "477178291728547850",
-        "391401639501889538",
-        "394157641129132032",
-        "393179168499695619",
-        "393845962180657175",
-        "416706247610466316",
-        "384158864871784451",
-        "400447007405375488",
-        "414097451566366720",
-        "439532683635326986",
-        "409766895714041857",
-        "384147252484243457",
-        "384497390478163971",
-        "384496784938106902",
-        "446553836472107019",
-        "381386573830160396",
-        "421465674267885568",
-        "389484679570391040",
-        "384038662540886016",
-        "384834111665078282",
-        "384122129391812628",
-        "383962757583863810",
-        "413465335455547393",
-        "383963067085750272",
-        "383961038162231296"
+    "patterns": [
+        "<@\\!?(\\d{18})>.*?<@\\!?(?!\\1)(\\d{18})>.*?<@\\!?(?!(?:\\1|\\2))(\\d{18})>.*?<@\\!?(?!(?:\\1|\\2))(\\d{18})>.*?<@\\!?(?!(?:\\1|\\2|\\3))(\\d{18})>.*?<@\\!?(?!(?:\\1|\\2|\\3|\\4))(\\d{18})>",
+        "meatloaf"
     ]
 }

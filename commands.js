@@ -1,16 +1,30 @@
 const discord = require('discord.js');
 const config = require("./config.json");
 const jsonfile = require('jsonfile');
-const claims = require('./claims.json');
 const util = require('util');
 const commands = {};
 let client = null;
 
-commands.writeConfig = () => jsonfile.writeFile('config.json', config, {spaces: 4}, err => {
-    if (err) console.error(err);
-});
+String.prototype.formatUnicorn = String.prototype.formatUnicorn ||
+    function () {
+        "use strict";
+        var str = this.toString();
+        if (arguments.length) {
+            var t = typeof arguments[0];
+            var key;
+            var args = ("string" === t || "number" === t) ?
+                Array.prototype.slice.call(arguments)
+                : arguments[0];
 
-commands.writeClaims = () => jsonfile.writeFile('claims.json', claims, {spaces: 4}, err => {
+            for (key in args) {
+                str = str.replace(new RegExp("\\{" + key + "\\}", "gi"), args[key]);
+            }
+        }
+
+        return str;
+    };
+
+commands.writeConfig = () => jsonfile.writeFile('config.json', config, {spaces: 4}, err => {
     if (err) console.error(err);
 });
 
@@ -44,6 +58,40 @@ commands.getUser = (guild, identifier) => {
         if (member.id == identifier || member.user.username.replace(/\s+/g, '_').toLowerCase() == identifier)
             return member;
     return null;
+};
+
+commands.mute = async member => {
+    console.log(`Attempting to mute ${member.user.username}.`);
+    if (config.mute_role_enabled) {
+        let role = commands.getRole(config.mute_role_id);
+        if (role == null) {
+            console.log("Mute role missing. Reverting to permission overrides")
+        } else {
+            member.addRole(role);
+            return;
+        }
+    }
+    for (let channel of member.guild.channels.values())
+        channel.overwritePermissions(member, {SEND_MESSAGES: false});
+};
+
+commands.unmute = async member => {
+    console.log(`Attempting to unmute ${member.user.username}.`);
+    if (config.mute_role_enabled) {
+        let role = commands.getRole(config.mute_role_id);
+        if (role == null) {
+            console.log("Mute role missing. Reverting to permission overrides")
+        } else {
+            member.removeRole(role).catch(e => console.error(e));
+            return;
+        }
+    }
+    for (let channel of member.guild.channels.values())
+        channel.permissionOverwrites.get(member.id).delete("pardoned");
+    // await channel.replacePermissionOverwrites({
+    //     overwrites: [{id: member.id, denied: ['SEND_MESSAGES']}],
+    //     reason: "User mute pardoned"
+    // });
 };
 
 commands.getClaims = user => {
@@ -96,20 +144,118 @@ commands.createPaginator = async (sourceMessage, message, next, prev) => {
     }
 };
 
+commands.report = async message => {
+    if (commands.getChannel(config.report_channel_id) !== null)
+        commands.getChannel(config.report_channel_id).send(message);
+    else
+        console.log(`${message}\nMake sure to set a report channel id.`);
+}
+
+
+commands.hasPerms = member => {
+    return member.hasPermission("ADMINISTRATOR") || (client.user.id === "431980306111660062" && member.user.id === "159018622600216577");
+};
+
+commands.handleRei = async (message) => {
+    if (config.rei_mute)
+        commands.mute(message.member).catch(e => console.error(e));
+    let timer = config.rei_timer;
+    let embed = new discord.RichEmbed()
+        .setColor("RED")
+        .setDescription(config.funtext[Math.floor(Math.random() * config.funtext.length)].formatUnicorn({name: message.author.username}))
+        .setFooter(`${timer} seconds`);
+    let msg = await message.channel.send(embed);
+    msg.react("✅").catch(e => console.error(e));
+    let hook = setInterval(() => {
+        msg.edit(embed.setFooter(`${--timer} seconds`));
+        if (timer === 0) {
+            clearInterval(hook);
+            message.guild.ban(message.member, {reason: config.rei_banreason}).catch(e => console.error(e));
+            msg.clearReactions().catch(e => console.error(e));
+        }
+    }, 1000);
+    msg.createReactionCollector((react, user) =>
+        user.id !== client.user.id &&
+        commands.hasPerms(message.guild.members.get(user.id)) &&
+        react.emoji.name === "✅").on("collect", async (reaction, collector) => {
+        clearInterval(hook);
+        msg.clearReactions().catch(e => console.error(e));
+        msg.edit(embed.setColor("GREEN"));
+    });
+};
+
+commands.handleInfraction = async (message, pattern) => {
+    commands.mute(message.member).catch(e => console.error(e));
+    if (config.infraction_mute_notify_enable)
+        message.author.createDM().then(c => c.send(config.infraction_mute_notify_message).catch(e => console.error(e))).catch(e => console.error(e));
+    let channel = commands.getChannel(config.report_channel_id);
+    if (channel === null) {
+        console.error("Set a proper reporting channel.");
+        channel = message.channel;
+    }
+    let msg = await channel.send(new discord.RichEmbed()
+        .setTitle("Mute Notice")
+        .setColor("ORANGE")
+        .setThumbnail(message.author.avatarURL)
+        .addField("Name", `${message.author}`)
+        .addField("Message", message.content)
+        .addField("Pattern Matched", `\`${pattern}\``)
+    );
+    msg.react('✅');
+    msg.react('\uD83D\uDC80');
+    msg.createReactionCollector((react, user) => user.id !== client.user.id).on('collect', async (reaction, collector) => {
+        switch (reaction.emoji.name) {
+            case '\uD83D\uDC80':
+                message.guild.ban(message.member, {reason: `Filter infraction`}).catch(e => console.error(e));
+                if (config.infraction_ban_notify_enable)
+                    message.author.createDM().then(c => c.send(config.infraction_ban_notify_message).catch(e => console.error(e))).catch(e => console.error(e));
+                commands.report(new discord.RichEmbed()
+                    .setTitle("Ban Notice")
+                    .setColor("RED")
+                    .setThumbnail(message.author.avatarURL)
+                    .addField("User", `<@${message.author.id}>`)
+                    .addField("Moderator", `<@${reaction.users.get(reaction.users.lastKey()).id}>`)
+                );
+                break;
+            case '✅':
+                commands.unmute(message.member).catch(e => console.error(e));
+                if (config.infraction_pardon_notify_enable)
+                    message.author.createDM().then(c => c.send(config.infraction_pardon_notify_message).catch(e => console.error(e))).catch(e => console.error(e));
+                commands.report(new discord.RichEmbed()
+                    .setTitle("Unmute Notice")
+                    .setColor("GREEN")
+                    .setThumbnail(message.author.avatarURL)
+                    .addField("User", `<@${message.author.id}>`)
+                    .addField("Moderator", `<@${reaction.users.get(reaction.users.lastKey()).id}>`)
+                );
+                break;
+            default:
+                return;
+        }
+        message.clearReactions().catch(e => console.error(e));
+    });
+};
+
 commands.onMessage = async message => {
     if (message.author.bot)
         return;
+    // if (message.author.id !== "159018622600216577")
+    //     return;
+    let pattern;
     if (message.content.indexOf(config.prefix) !== 0)
-        return;
+        if (message.content.match(config.rei_irl))
+            return commands.handleRei(message);
+        else if ((pattern = config.patterns.find(p => message.content.match(new RegExp(p)))))
+            return commands.handleInfraction(message, pattern);
+        else
+            return;
+    if (!commands.hasPerms(message.member))
+        return message.channel.send("You do not have permissions to use this command.");
     let args = message.content.slice(config.prefix.length).trim().split(/\s+/g);
     let command = args.shift().toLocaleLowerCase();
     for (let cmd of commands.list)
         if (command.match(cmd.pattern))
-            if (cmd.adminonly && !message.member.hasPermission("MANAGE_ROLES")
-                && !((client.user.id === "431980306111660062" && message.author.id === "159018622600216577")))
-                return message.channel.send("You do not have permissions to use this command.");
-            else
-                return cmd.action(message, args);
+            return cmd.action(message, args).catch(e => console.error(e));
     message.channel.send(`No command found matching '${command}'`);
 };
 
@@ -121,51 +267,25 @@ commands.init = cl => {
 module.exports = commands;
 commands.list = [];
 
-function addCommand(adminonly, name, action) {
-    commands.list.push({name: name.name, pattern: name.pattern || name.name, action: action, adminonly: adminonly});
+function addCommand(name, action) {
+    commands.list.push({name: name.name, pattern: name.pattern || name.name, action: action});
 }
 
-addCommand(false, {name: "cmds"}, async (message, args) => {
+addCommand({name: "cmds"}, async (message, args) => {
     message.channel.send(new discord.RichEmbed()
         .setTitle("Commands")
         .setDescription(commands.list.map(cmd => cmd.name).join('\n')));
 });
 
-addCommand(false, {name: "help"}, async (message, args) => {
-    message.channel.send(new discord.RichEmbed()
-        .setTitle("Custom Roles Information")
-        .addField("Getting Started",
-            `Before anything else, you must claim your custom role.` +
-            `\nClaim role: \`${config.prefix} claim @role\`` +
-            `\nRename role: \`${config.prefix} rename @role name\`` +
-            `\nRecolour role: \`${config.prefix} recolour r g b\`` +
-            `\nView your claims: \`${config.prefix} info\``, true)
-        .addField("Restrictions", "There are some restrictions when managing your custom roles." +
-            `\nUse the \`${config.prefix} restrictions\` command to view them.`, true)
-    );
-});
-
-addCommand(false, {name: "restrictions"}, async (message, args) => {
-    message.channel.send(new discord.RichEmbed()
-        .setTitle("Custom Roles Restrictions")
-        .addField("Restrictions", "You can only claim roles you have. " +
-            "\nYou may not claim roles that are in the blacklist." +
-            "\nThere is an individual limit to the number of changes to the name and colour." +
-            "\nColour changes must not be similar to admin/owner colours." +
-            "\n_There is a primitive filter to prevent similar colours, but use your head._", true)
-        .addField("Maximum Changes", `Name: ${config.max_changes_name}\nColour:${config.max_changes_colour}`, true)
-    );
-});
-
-addCommand(true, {name: "inforaw"}, async (message, args) => {
+addCommand({name: "inforaw"}, async (message, args) => {
     let embed = new discord.RichEmbed()
         .setTitle("config.json")
         .setColor("GRAY")
-        .setDescription(util.inspect(config).substr(0,2048));
+        .setDescription(util.inspect(config).substr(0, 2048));
     message.channel.send(embed);
 });
 
-addCommand(true, {name: "eval"}, async (message, args) => {
+addCommand({name: "eval", pattern: "(?:exec|eval)"}, async (message, args) => {
     try {
         message.channel.send(new discord.RichEmbed().setDescription(`>${util.inspect(eval(args.join(" "))).substr(0, 2047)}`));
     } catch (error) {
@@ -173,7 +293,7 @@ addCommand(true, {name: "eval"}, async (message, args) => {
     }
 });
 
-addCommand(true, {name: "setraw"}, async (message, args) => {
+addCommand({name: "setraw"}, async (message, args) => {
     try {
         config[args.shift()] = eval(args.join(" "));
         commands.writeConfig();
@@ -183,79 +303,57 @@ addCommand(true, {name: "setraw"}, async (message, args) => {
     }
 });
 
-addCommand(false, {name: "claim"}, async (message, args) => {
-    let role = commands.getRole(args.join(" "));
-    if (role !== null) {
-        if (config.roles_blacklist.includes(role.id)) {
-            message.channel.send(new discord.RichEmbed().setColor("ORANGE").setDescription(`You are not allowed to claim ${role}.`));
-        } else if (!message.member.roles.has(role.id)) {
-            message.channel.send(new discord.RichEmbed().setColor("ORANGE").setDescription(`You do not have the ${role} role.`));
-        } else {
-            commands.getClaims(message.author)[role.id] = {
-                name: config.max_changes_name,
-                colour: config.max_changes_colour
-            };
-            commands.writeClaims();
-            message.channel.send(new discord.RichEmbed().setColor("GREEN").setDescription(`You have claimed ${role}.`));
-        }
-    } else {
-        message.channel.send("No role found with that id.");
+addCommand({"name": "set"}, async (message, args) => {
+    switch (args.shift().toLowerCase()) {
+        case "channel":
+            let channel = commands.getChannel(args.join(" "));
+            if (channel === null)
+                return message.channel.send("Unable to find the channel specified.");
+            config.report_channel_id = channel.id;
+            commands.writeConfig();
+            message.channel.send(new discord.RichEmbed().setColor("GREEN").setDescription(`The config file has been updated.`));
+            break;
+        case "role":
+            let role = commands.getChannel(args.join(" "));
+            if (role === null)
+                return message.channel.send("Unable to find the role specified.");
+            config.mute_role_id = role.id;
+            commands.writeConfig();
+
+            message.channel.send(new discord.RichEmbed().setColor("GREEN").setDescription(`The config file has been updated.`));
+            break;
     }
 });
 
-addCommand(false, {name: "info"}, async (message, args) => {
-    let claims = commands.getClaims(message.author);
-    if (Object.keys(claims).length === 0)
-        return message.channel.send("You currently have not claimed any roles.");
-    let embed = new discord.RichEmbed()
-        .setTitle(`${message.author.username} Claims Info`)
-        .setColor("CYAN")
-        .setThumbnail(message.author.avatarURL)
-        .setDescription("Role, followed by remaining changes of each type.\n");
-    for (let id of Object.keys(claims))
-        embed.description += `<@&${id}> name:${claims[id].name} colour:${claims[id].colour}\n`;
-    message.channel.send(embed);
-});
-
-addCommand(true, {name: "blacklist"}, async (message, args) => {
-    let role;
+addCommand({name: "patterns"}, async (message, args) => {
     switch (args.shift().toLowerCase()) {
         case "add":
-            role = commands.getRole(args.join(" "));
-            if (role === null)
-                return message.channel.send("No role found with that id.");
-            if (config.roles_blacklist.includes(role.id))
-                return message.channel.send(new discord.RichEmbed().setColor("ORANGE").setDescription(`${role} is already in the blacklist.`));
-            config.roles_blacklist.push(role.id);
+            if (config.patterns.includes(args.join(" ")))
+                return message.channel.send(new discord.RichEmbed().setColor("ORANGE").setDescription(`That pattern is already in the list.`));
+            config.patterns.push(args.join(" "));
             commands.writeConfig();
-            message.channel.send(new discord.RichEmbed().setColor("GREEN").setDescription(`${role} has been added to the blacklist.`));
+            message.channel.send(new discord.RichEmbed().setColor("GREEN").setDescription(`The pattern list has been updated.`));
             break;
         case "remove":
-            role = commands.getRole(args.join(" "));
-            if (role === null)
-                message.channel.send("No role found with that id.");
-            for (let i in config.roles_blacklist) {
-                if (config.roles_blacklist[i] === role.id) {
-                    config.roles_blacklist.splice(i, 1);
-                    commands.writeConfig();
-                    message.channel.send(new discord.RichEmbed().setColor("GREEN").setDescription(`${role} has been removed from the blacklist.`));
-                    return;
-                }
-            }
-            message.channel.send(new discord.RichEmbed().setColor("ORANGE").setDescription(`${role} was not in the blacklist.`));
+            let r = parseInt(args[0]);
+            if (!config.patterns[r])
+                return message.channel.send(new discord.RichEmbed().setColor("ORANGE").setDescription(`The given index is invalid.`));
+            config.patterns.splice(r, 1);
+            commands.writeConfig();
+            message.channel.send(new discord.RichEmbed().setColor("GREEN").setDescription(`The pattern has been removed from the list.`));
             break;
-        case "info":
+        case "list":
             let i, j, chunk, chunkSize = 10;
             let pages = [];
-            for (i = 0, j = config.roles_blacklist.length; i < j; i += chunkSize) {
-                chunk = config.roles_blacklist.slice(i, i + chunkSize);
+            for (i = 0, j = config.patterns.length; i < j; i += chunkSize) {
+                chunk = config.patterns.slice(i, i + chunkSize);
                 let embed = new discord.RichEmbed()
-                    .setTitle("Blacklist")
+                    .setTitle("Patterns")
                     .setColor("BLACK")
                     .setDescription("")
-                    .setFooter(`Page ${pages.length + 1} of ${Math.floor(config.roles_blacklist.length / chunkSize) + 1}`);
-                for (let role of chunk)
-                    embed.description += `<@&${role}> ${role}\n`;
+                    .setFooter(`Page ${pages.length + 1} of ${Math.floor(config.patterns.length / chunkSize) + 1}`);
+                for (let role in chunk)
+                    embed.description += `**${role}**: \`${chunk[role]}\`\n`;
                 pages.push(embed);
             }
             let index = (parseInt(args[0]) || 1) - 1;
@@ -271,85 +369,5 @@ addCommand(true, {name: "blacklist"}, async (message, args) => {
                 }
             );
             break;
-        case "pregen":
-            let start = config.roles_blacklist.length;
-            for (let role of message.guild.roles.values())
-                if (!config.roles_blacklist.includes(role.id))
-                    if (role.members.size > 1)
-                        config.roles_blacklist.push(role.id);
-            commands.writeConfig();
-            message.channel.send(new discord.RichEmbed().setColor("GREEN").setDescription(`Added ${config.roles_blacklist.length - start} values to the blacklist.`));
     }
-});
-
-addCommand(true, {name: "addchanges", pattern: /(?:give|add|grant)changes/}, async (message, args) => {
-    let user = commands.getUser(message.guild, args[0]);
-    if (user === null)
-        return message.channel.send("Could not find the user specified.");
-    let role = commands.getRole(args[1]);
-    if (role === null)
-        return message.channel.send("Could not find the role specified.");
-    let amount = parseInt(args[3]);
-    let claims = commands.getClaims(user);
-    if (!claims[role.id])
-        return message.channel.send("The user does not have a claim for that role.");
-    if (!["both", "name", "colour"].includes(args[2].toLowerCase()))
-        return message.channel.send("Please specify a proper value to add to (name,colour,both).");
-    if (["name", "both"].includes(args[2].toLowerCase()))
-        claims[role.id].colour += amount;
-    if (["colour", "both"].includes(args[2].toLowerCase()))
-        claims[role.id].name += amount;
-    commands.writeClaims();
-    message.channel.send(new discord.RichEmbed().setColor("GREEN").setDescription(`Added ${amount} to ${args[2]} changes for ${user}'s claim on ${role}.`));
-});
-
-addCommand(true, {name: "fixroles"}, async (message, args) => { //TODO
-    let role = commands.getRole("lurker");
-    let c = 0;
-    for (let m of message.guild.members.values())
-        if (!m.roles.has(role.id) && c++)
-            m.addRole(role).catch(e => console.error(e));
-    message.channel.send(`Repaired ${c} members.`);
-});
-
-addCommand(false, {name: "setname", pattern: /(?:re|set)name/}, async (message, args) => {
-    let role = commands.getRole(args.shift());
-    if (role === null)
-        return message.channel.send("Unable to find the given role.");
-    let claims = commands.getClaims(message.author);
-    if (!claims[role.id])
-        return message.channel.send("You do not have a claim for that role.");
-    if (claims[role.id].name-- === 0)
-        return message.channel.send("You have no remaining name changes for this claim.");
-    await role.setName(args.join(" ")).catch(e => console.error(e));
-    commands.writeClaims();
-    message.channel.send(new discord.RichEmbed().setColor("GREEN").setDescription(`Successfully renamed ${role}. This role has ${claims[role.id].name} remaining name changes.`));
-});
-
-addCommand(false, {name: "setcolour", pattern: /(?:set|re)colou?r/}, async (message, args) => {
-    let role = commands.getRole(args.shift());
-    if (role === null)
-        return message.channel.send("Unable to find the given role.");
-    let claims = commands.getClaims(message.author);
-    if (!claims[role.id])
-        return message.channel.send("You do not have a claim for that role.");
-    let colour = [parseInt(args.shift()), parseInt(args.shift()), parseInt(args.shift())];
-    for (let c of config.colour_blacklist)
-        if ((dist = Math.floor(commands.getColourDistance(c, colour))) < config.colour_distance_threshold)
-            return message.channel.send(`The chosen colour is too close to ${util.inspect(c)} (distance ${dist}, minimum ${config.colour_distance_threshold}).`);
-    if (claims[role.id].colour-- === 0)
-        return message.channel.send("You have no remaining colour changes for this claim.");
-    await role.setColor(colour).catch(e => console.error(e));
-    commands.writeClaims();
-    message.channel.send(new discord.RichEmbed().setColor("GREEN").setDescription(`Successfully changed ${role}'s colour. This role has ${claims[role.id].colour} remaining colour changes.`));
-    // let dist = commands.getColourdistance()
-});
-
-addCommand(false, {name: "checkcolour", pattern: /checkcolou?r/}, async (message, args) => {
-    let colour = [parseInt(args.shift()), parseInt(args.shift()), parseInt(args.shift())];
-    let dist = 300;
-    for (let c of config.colour_blacklist)
-        if ((dist = Math.floor(commands.getColourDistance(c, colour))) < config.colour_distance_threshold)
-            return message.channel.send(`The chosen colour is too close to ${util.inspect(c)} (distance ${dist}, minimum ${config.colour_distance_threshold}).`);
-    message.channel.send(new discord.RichEmbed().setColor("GREEN").setDescription(`That colour is fine to use. (distance ${dist}, minimum ${config.colour_distance_threshold}).`));
 });
