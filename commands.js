@@ -189,10 +189,8 @@ commands.handleInfraction = async (message, pattern) => {
     if (config.infraction_mute_notify_enable)
         message.author.createDM().then(c => c.send(config.infraction_mute_notify_message).catch(e => console.error(e))).catch(e => console.error(e));
     let channel = commands.getChannel(config.report_channel_id);
-    if (channel === null) {
-        console.error("Set a proper reporting channel.");
-        channel = message.channel;
-    }
+    if (channel === null)
+        return console.error("Set a proper reporting channel.");
     let msg = await channel.send(new discord.RichEmbed()
         .setTitle("Mute Notice")
         .setColor("ORANGE")
@@ -271,7 +269,7 @@ function addCommand(name, action) {
     commands.list.push({name: name.name, pattern: name.pattern || name.name, action: action});
 }
 
-addCommand({name: "cmds"}, async (message, args) => {
+addCommand({name: "help", pattern:"(?:cmds|help)"}, async (message, args) => {
     message.channel.send(new discord.RichEmbed()
         .setTitle("Commands")
         .setDescription(commands.list.map(cmd => cmd.name).join('\n')));
@@ -303,7 +301,7 @@ addCommand({name: "setraw"}, async (message, args) => {
     }
 });
 
-addCommand({"name": "set"}, async (message, args) => {
+addCommand({name: "set"}, async (message, args) => {
     switch (args.shift().toLowerCase()) {
         case "channel":
             let channel = commands.getChannel(args.join(" "));
