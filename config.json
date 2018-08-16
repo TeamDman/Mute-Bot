@@ -43,7 +43,8 @@
     "{name} dropped his phone in the toilet.",
     "{name} wants to speak to the manager.",
     "{name} thinks ugandan knuckles memes are funny.",
-    "{name} entered the lion's den."
+    "{name} entered the lion's den.",
+    "{name} doesn't feel so good."
   ],
   "patterns": [
     "<@&?\\!?(\\d{18})>.*?<@&?\\!?(?!\\1)(\\d{18})>.*?<@&?\\!?(?!(?:\\1|\\2))(\\d{18})>.*?<@&?\\!?(?!(?:\\1|\\2))(\\d{18})>.*?<@&?\\!?(?!(?:\\1|\\2|\\3))(\\d{18})>.*?<@&?\\!?(?!(?:\\1|\\2|\\3|\\4))(\\d{18})>",
