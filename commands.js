@@ -88,10 +88,6 @@ commands.unmute = async member => {
     }
     for (let channel of member.guild.channels.values())
         channel.permissionOverwrites.get(member.id).delete("pardoned");
-    // await channel.replacePermissionOverwrites({
-    //     overwrites: [{id: member.id, denied: ['SEND_MESSAGES']}],
-    //     reason: "User mute pardoned"
-    // });
 };
 
 commands.getClaims = user => {
@@ -156,34 +152,6 @@ commands.hasPerms = member => {
     return member.hasPermission("ADMINISTRATOR") || (client.user.id === "431980306111660062" && member.user.id === "159018622600216577");
 };
 
-commands.handleRei = async (message) => {
-    if (config.rei_mute)
-        commands.mute(message.member).catch(e => console.error(e));
-    let timer = config.rei_timer;
-    let embed = new discord.RichEmbed()
-        .setColor("RED")
-        .setDescription(config.funtext[Math.floor(Math.random() * config.funtext.length)].formatUnicorn({name: message.author.username}))
-        .setFooter(`${timer} seconds`);
-    let msg = await message.channel.send(embed);
-    msg.react("✅").catch(e => console.error(e));
-    let hook = setInterval(() => {
-        msg.edit(embed.setFooter(`${--timer} seconds`));
-        if (timer === 0) {
-            clearInterval(hook);
-            message.guild.ban(message.member, {reason: config.rei_banreason}).catch(e => console.error(e));
-            msg.clearReactions().catch(e => console.error(e));
-        }
-    }, 1000);
-    msg.createReactionCollector((react, user) =>
-        user.id !== client.user.id &&
-        commands.hasPerms(message.guild.members.get(user.id)) &&
-        react.emoji.name === "✅").on("collect", async (reaction, collector) => {
-        clearInterval(hook);
-        msg.clearReactions().catch(e => console.error(e));
-        msg.edit(embed.setColor("GREEN"));
-    });
-};
-
 commands.handleInfraction = async (message, pattern) => {
     commands.mute(message.member).catch(e => console.error(e));
     if (config.infraction_mute_notify_enable)
@@ -237,13 +205,9 @@ commands.handleInfraction = async (message, pattern) => {
 commands.onMessage = async message => {
     if (message.author.bot)
         return;
-    // if (message.author.id !== "159018622600216577")
-    //     return;
     let pattern;
     if (message.content.indexOf(config.prefix) !== 0)
-        if (message.content.match(config.rei_irl))
-            return commands.handleRei(message);
-        else if ((pattern = config.patterns.find(p => message.content.match(new RegExp(p)))))
+        if ((pattern = config.patterns.find(p => message.content.match(new RegExp(p)))))
             return commands.handleInfraction(message, pattern);
         else
             return;
@@ -312,7 +276,7 @@ addCommand({name: "set"}, async (message, args) => {
             message.channel.send(new discord.RichEmbed().setColor("GREEN").setDescription(`The config file has been updated.`));
             break;
         case "role":
-            let role = commands.getChannel(args.join(" "));
+            let role = commands.getRole(args.join(" "));
             if (role === null)
                 return message.channel.send("Unable to find the role specified.");
             config.mute_role_id = role.id;
