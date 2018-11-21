@@ -1,3 +1,5 @@
 bot.properties
 token.json
 .idea
+.git
+node_modules
